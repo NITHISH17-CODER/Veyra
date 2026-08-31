@@ -11,14 +11,25 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
 # ── Engine ─────────────────────────────────────────────────────────────────────
+engine_args = {
+    "pool_pre_ping": True,
+    "echo": settings.DEBUG,
+}
+
+if "sqlite" in settings.DATABASE_URL.lower():
+    engine_args["connect_args"] = {"check_same_thread": False}
+else:
+    engine_args.update({
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_recycle": 3600,
+    })
+
 engine = create_engine(
     settings.DATABASE_URL,
-    pool_pre_ping=True,       # verify connections before handing them out
-    pool_size=10,             # maintain up to 10 persistent connections
-    max_overflow=20,          # allow up to 20 additional overflow connections
-    pool_recycle=3600,        # recycle connections after 1 hour (MySQL wait_timeout)
-    echo=settings.DEBUG,      # log SQL statements in debug mode
+    **engine_args,
 )
+
 
 # ── Session factory ────────────────────────────────────────────────────────────
 SessionLocal = sessionmaker(

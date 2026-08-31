@@ -70,7 +70,9 @@ allowed_origins = list(set(settings.CORS_ORIGINS + [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
+    "https://veyra3.netlify.app",
 ]))
+
 
 app.add_middleware(
     CORSMiddleware,
