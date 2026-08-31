@@ -18,7 +18,9 @@ env/
 ENV/
 .pytest_cache/
 .coverage
+coverage/
 htmlcov/
+
 
 # Node & Frontend Build Outputs
 node_modules/
