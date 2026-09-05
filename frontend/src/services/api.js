@@ -8,7 +8,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'Bypass-Tunnel-Reminder': 'true',
   },
-  timeout: 15000,
+  timeout: 60000,
 });
 
 // Request interceptor to attach JWT Bearer token
