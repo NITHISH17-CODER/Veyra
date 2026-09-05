@@ -2,8 +2,10 @@
 Centralised application settings loaded from environment variables / .env file.
 """
 
+import json
+from typing import List, Union, Any
 from pydantic_settings import BaseSettings
-from typing import List
+from pydantic import field_validator
 
 
 class Settings(BaseSettings):
@@ -18,10 +20,25 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/pathpilot_ai"
 
     # ── CORS ───────────────────────────────────────────────────────────────
-    CORS_ORIGINS: List[str] = [
-        "http://localhost:5173",   # Vite dev-server
+    CORS_ORIGINS: Union[List[str], str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
         "http://localhost:3000",
+        "https://veyra3.netlify.app",
     ]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> List[str]:
+        if isinstance(v, str):
+            v_trimmed = v.strip()
+            if v_trimmed.startswith("[") and v_trimmed.endswith("]"):
+                try:
+                    return json.loads(v_trimmed)
+                except Exception:
+                    pass
+            return [origin.strip() for origin in v_trimmed.split(",") if origin.strip()]
+        return v
 
     # ── AI / LLM (placeholder) ────────────────────────────────────────────
     OPENAI_API_KEY: str = ""

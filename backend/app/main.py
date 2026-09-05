@@ -66,7 +66,8 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 # ---------------------------------------------------------------------------
 # CORS — allow Vite dev-server (http://localhost:5173) and configured origins
 # ---------------------------------------------------------------------------
-allowed_origins = list(set(settings.CORS_ORIGINS + [
+raw_origins = settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else [settings.CORS_ORIGINS]
+allowed_origins = list(set(raw_origins + [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",

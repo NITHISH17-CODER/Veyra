@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Bell, Shield, Sliders, Save } from 'lucide-react';
+import { API_BASE_URL } from '../services/api';
 
 export const SettingsPage = () => {
   const { user, updateUserPreferences, showToast } = useApp();
@@ -125,7 +126,7 @@ export const SettingsPage = () => {
             <input
               type="text"
               readOnly
-              value="http://localhost:8000/api"
+              value={API_BASE_URL}
               className="input-flat w-full font-mono text-xs border-[#DCE6F2]"
             />
           </div>
