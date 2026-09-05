@@ -5,6 +5,9 @@ All credentials are loaded from the .env file via app.core.config.settings.
 No passwords are ever hardcoded in source code.
 """
 
+import os
+import ssl
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -24,6 +27,17 @@ else:
         "max_overflow": 20,
         "pool_recycle": 3600,
     })
+
+    # Cloud MySQL providers (Aiven, PlanetScale, etc.) require SSL.
+    # Enable SSL when DATABASE_SSL env var is set or when not connecting to localhost.
+    database_ssl = os.getenv("DATABASE_SSL", "").lower()
+    is_localhost = any(host in settings.DATABASE_URL for host in ["localhost", "127.0.0.1"])
+
+    if database_ssl == "true" or (database_ssl != "false" and not is_localhost):
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+        engine_args["connect_args"] = {"ssl": ssl_ctx}
 
 engine = create_engine(
     settings.DATABASE_URL,
