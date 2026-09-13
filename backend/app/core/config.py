@@ -17,13 +17,17 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # ── Database ───────────────────────────────────────────────────────────
-    DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/pathpilot_ai"
+    # In cloud/production, provide DATABASE_URL in Render environment variables (Cloud MySQL / PostgreSQL).
+    # Default is self-contained SQLite database for seamless zero-config persistence.
+    DATABASE_URL: str = "sqlite:///./veyra_production.db"
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def normalize_database_url(cls, v: Any) -> str:
         if isinstance(v, str):
             url = v.strip()
+            if not url:
+                return "sqlite:///./veyra_production.db"
             # Render PostgreSQL URLs start with postgres:// or postgresql://
             if url.startswith("postgres://"):
                 url = url.replace("postgres://", "postgresql://", 1)
@@ -32,6 +36,7 @@ class Settings(BaseSettings):
                 url = url.replace("mysql://", "mysql+pymysql://", 1)
             return url
         return str(v)
+
 
     # ── CORS ───────────────────────────────────────────────────────────────
     CORS_ORIGINS: Union[List[str], str] = [

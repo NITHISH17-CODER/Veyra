@@ -214,23 +214,35 @@ async def health_check():
     }
 
 
+@app.get("/api/health/db", tags=["Health"])
 @app.get("/api/health/database", tags=["Health"])
 async def database_health_check():
-    """Verify that the backend can reach the database."""
+    """Verify that the backend can reach the database and report connectivity safely."""
+    import re
+    is_localhost = any(h in settings.DATABASE_URL for h in ["localhost", "127.0.0.1"])
+    db_type = "sqlite" if "sqlite" in settings.DATABASE_URL.lower() else ("postgresql" if "postgres" in settings.DATABASE_URL.lower() else "mysql")
+
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
         return {
             "status": "ok",
             "database": "connected",
+            "database_type": db_type,
+            "database_configured": True,
+            "is_localhost": is_localhost,
         }
     except Exception as exc:
         error_message = str(exc)
-        if "@" in error_message:
-            error_message = "Unable to connect to the database. Check your DATABASE_URL in .env."
+        # Strip sensitive credentials from error message
+        sanitized = re.sub(r"://[^:]+:[^@]+@", "://***:***@", error_message)
         return {
             "status": "error",
             "database": "disconnected",
-            "detail": error_message,
+            "database_type": db_type,
+            "database_configured": not is_localhost or "sqlite" in settings.DATABASE_URL.lower(),
+            "is_localhost": is_localhost,
+            "detail": sanitized,
         }
+
 
