@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
+export const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? '/api'
+    : 'https://veyra-rn16.onrender.com/api')
+).replace(/\/+$/, '');
+
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -9,6 +15,7 @@ const api = axios.create({
   },
   timeout: 60000,
 });
+
 
 
 // Request interceptor to attach JWT Bearer token
