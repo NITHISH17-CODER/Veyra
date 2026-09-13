@@ -39,8 +39,17 @@ async def lifespan(app: FastAPI):
     # Ensure database schema is created on startup
     try:
         Base.metadata.create_all(bind=engine)
+        # Check if database needs initial seeding (idempotent)
+        from app.database.session import SessionLocal
+        from app.models.skill import Skill
+        with SessionLocal() as db:
+            if db.query(Skill).count() == 0:
+                print("Database catalog is empty. Running initial idempotent seed...")
+                from app.database.seed import seed_database
+                seed_database(db)
+                print("Database seeding completed.")
     except Exception as e:
-        print(f"Warning: Could not create tables on startup ({e}). Verify DB connection.")
+        print(f"Warning: Could not initialize database schema on startup ({e}). Verify DB connection.")
     yield
 
 
@@ -53,7 +62,7 @@ os.makedirs("uploads/resumes", exist_ok=True)
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="AI-powered personalized learning path generator",
+    description="Veyra AI — Intelligent Career & Skill Acceleration Platform",
     version=settings.APP_VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -64,7 +73,7 @@ app = FastAPI(
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # ---------------------------------------------------------------------------
-# CORS — allow Vite dev-server (http://localhost:5173) and configured origins
+# CORS — allow Vite dev-server, Netlify, Render frontend, and custom domains
 # ---------------------------------------------------------------------------
 raw_origins = settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else [settings.CORS_ORIGINS]
 allowed_origins = list(set(raw_origins + [
@@ -74,14 +83,15 @@ allowed_origins = list(set(raw_origins + [
     "https://veyra3.netlify.app",
 ]))
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|.*\.netlify\.app|.*\.onrender\.com)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 # ---------------------------------------------------------------------------
@@ -174,18 +184,39 @@ app.include_router(news_router)
 # ---------------------------------------------------------------------------
 # Health-check endpoints
 # ---------------------------------------------------------------------------
-@app.get("/api/health", tags=["Health"])
-async def health_check():
-    """Return a simple health-check response."""
+@app.get("/health", tags=["Health"])
+async def root_health_check():
+    """Simple lightweight health check for Render / load balancers."""
     return {
         "status": "ok",
-        "message": "PathPilot AI backend is running",
+        "service": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+    }
+
+
+@app.get("/", tags=["Health"])
+async def root_status():
+    """Root status endpoint."""
+    return {
+        "status": "ok",
+        "service": settings.APP_NAME,
+        "docs": "/docs",
+    }
+
+
+@app.get("/api/health", tags=["Health"])
+async def health_check():
+    """API health-check response."""
+    return {
+        "status": "ok",
+        "message": f"{settings.APP_NAME} backend is running",
+        "version": settings.APP_VERSION,
     }
 
 
 @app.get("/api/health/database", tags=["Health"])
 async def database_health_check():
-    """Verify that the backend can reach the MySQL database."""
+    """Verify that the backend can reach the database."""
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
@@ -202,3 +233,4 @@ async def database_health_check():
             "database": "disconnected",
             "detail": error_message,
         }
+

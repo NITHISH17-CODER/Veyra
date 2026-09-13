@@ -12,12 +12,26 @@ class Settings(BaseSettings):
     """Application-wide configuration."""
 
     # ── General ────────────────────────────────────────────────────────────
-    APP_NAME: str = "PathPilot AI"
-    APP_VERSION: str = "0.1.0"
-    DEBUG: bool = True
+    APP_NAME: str = "Veyra AI"
+    APP_VERSION: str = "1.0.0"
+    DEBUG: bool = False
 
     # ── Database ───────────────────────────────────────────────────────────
     DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/pathpilot_ai"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def normalize_database_url(cls, v: Any) -> str:
+        if isinstance(v, str):
+            url = v.strip()
+            # Render PostgreSQL URLs start with postgres:// or postgresql://
+            if url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql://", 1)
+            # Cloud MySQL URLs often start with mysql://
+            elif url.startswith("mysql://") and not url.startswith("mysql+pymysql://"):
+                url = url.replace("mysql://", "mysql+pymysql://", 1)
+            return url
+        return str(v)
 
     # ── CORS ───────────────────────────────────────────────────────────────
     CORS_ORIGINS: Union[List[str], str] = [
@@ -40,13 +54,13 @@ class Settings(BaseSettings):
             return [origin.strip() for origin in v_trimmed.split(",") if origin.strip()]
         return v
 
-    # ── AI / LLM (placeholder) ────────────────────────────────────────────
+    # ── AI / LLM ──────────────────────────────────────────────────────────
     OPENAI_API_KEY: str = ""
 
     # ── JWT / Auth ─────────────────────────────────────────────────────────
     SECRET_KEY: str = "change-me-to-a-long-random-string"
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
     class Config:
         env_file = ".env"
@@ -55,3 +69,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+

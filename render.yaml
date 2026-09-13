@@ -1,7 +1,10 @@
-# Render.com deployment blueprint for PathPilot AI backend
+# Render.com deployment blueprint for Veyra
 # https://render.com/docs/blueprint-spec
 
 services:
+  # ───────────────────────────────────────────────────────────────────────────
+  # Backend API — FastAPI Python Web Service
+  # ───────────────────────────────────────────────────────────────────────────
   - type: web
     name: veyra-backend
     runtime: python
@@ -10,21 +13,49 @@ services:
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /api/health
+    healthCheckPath: /health
     envVars:
       - key: APP_NAME
-        value: PathPilot AI
+        value: Veyra AI
       - key: APP_VERSION
-        value: 0.1.0
+        value: 1.0.0
       - key: DEBUG
         value: "False"
       - key: DATABASE_URL
-        sync: false  # Set manually — cloud MySQL connection string
+        sync: false  # Configure in Render Dashboard: MySQL / PostgreSQL connection string
+      - key: DATABASE_SSL
+        value: "true"
       - key: SECRET_KEY
-        generateValue: true  # Render auto-generates a secure random string
+        generateValue: true  # Render auto-generates a secure 256-bit random key
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
-        value: "60"
+        value: "1440"
       - key: CORS_ORIGINS
-        value: '["https://veyra3.netlify.app","http://localhost:5173"]'
+        value: '["https://veyra3.netlify.app","http://localhost:5173","http://127.0.0.1:5173"]'
       - key: PYTHON_VERSION
-        value: "3.10.0"
+        value: "3.10.11"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Frontend — React / Vite Static Site
+  # ───────────────────────────────────────────────────────────────────────────
+  - type: web
+    name: veyra-frontend
+    runtime: static
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: veyra-backend
+          property: host
+        value: https://${veyra-backend.host}/api
+      - key: VITE_USE_MOCK
+        value: "false"
+
